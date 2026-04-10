@@ -1,0 +1,79 @@
+from scapy.all import *
+
+packets = rdpcap(r"C:\Users\student\Desktop\capture.pcapng")
+
+total_packets = len(packets)
+total_size = sum(len(pkt) for pkt in packets)
+
+header_size = 0
+data_size = 0
+
+for pkt in packets:
+    pkt_len = len(pkt)
+    
+    if pkt.haslayer(IP):
+        ip_header = pkt[IP].ihl * 4
+        header_size += ip_header
+        
+        if pkt.haslayer(TCP):
+            tcp_header = pkt[TCP].dataofs * 4
+            header_size += tcp_header
+            data_size += pkt_len - (ip_header + tcp_header)
+        
+        elif pkt.haslayer(UDP):
+            header_size += 8
+            data_size += pkt_len - (ip_header + 8)
+
+print("Total number of packets:", total_packets)
+print("Size of data:", data_size, "bytes")
+print("Size of headers:", header_size, "bytes")
+
+
+code:
+from scapy.all import *
+from collections import defaultdict
+
+packets = rdpcap(r"C:\Users\student\Desktop\capture.pcapng")
+
+pair_bytes = defaultdict(int)
+pair_packets = defaultdict(int)
+pair_times = defaultdict(list)
+pair_protocol = defaultdict(lambda: defaultdict(int))
+
+for pkt in packets:
+    if pkt.haslayer(IP):
+        src = pkt[IP].src
+        dst = pkt[IP].dst
+        pair = tuple(sorted([src, dst]))
+        
+        pair_bytes[pair] += len(pkt)
+        pair_packets[pair] += 1
+        pair_times[pair].append(pkt.time)
+        
+        if pkt.haslayer(TCP):
+            pair_protocol[pair]["TCP"] += 1
+        elif pkt.haslayer(UDP):
+            pair_protocol[pair]["UDP"] += 1
+        else:
+            pair_protocol[pair]["Other"] += 1
+
+max_pair = max(pair_bytes, key=pair_bytes.get)
+
+print("Pair with Maximum Bytes:", max_pair)
+print("Maximum Bytes Transferred:", pair_bytes[max_pair])
+print()
+
+for pair in pair_packets:
+    print("Pair:", pair)
+    print("Total Packets:", pair_packets[pair])
+    
+    times = sorted(pair_times[pair])
+    if len(times) > 1:
+        diffs = [times[i+1] - times[i] for i in range(len(times)-1)]
+        avg_diff = sum(diffs) / len(diffs)
+        print("Average Inter-Packet Time:", avg_diff)
+    else:
+        print("Average Inter-Packet Time: 0")
+    
+    print("Protocol Distribution:", dict(pair_protocol[pair]))
+    print()
