@@ -1,0 +1,20 @@
+from scapy.all import *
+
+for i, pkt in enumerate(packets, start=1):
+    print(f"Packet {i}")
+
+    if IP in pkt:
+        old = pkt[IP].chksum
+        del pkt[IP].chksum
+        new = IP(bytes(pkt[IP])).chksum
+        print(" IP checksum old:", hex(old))
+        print(" IP checksum new:", hex(new))
+
+    if TCP in pkt:
+        old = pkt[TCP].chksum
+        del pkt[TCP].chksum
+        new = IP(bytes(pkt[IP]/pkt[TCP]))[TCP].chksum
+        print(" TCP checksum old:", hex(old))
+        print(" TCP checksum new:", hex(new))
+
+    print("-" * 40)
